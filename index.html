@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMSTUPX | Результат вместо бесконечного старта</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --bg-card: #141414;
+            --text: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --border: #222222;
+            --gold: #d4af37;
+            --gold-hover: #e8c65a;
+            --red: #ff4444;
+            --transition: 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        
+        /* Навигация */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .nav-logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .nav-links a:hover {
+            color: var(--gold);
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 24px 120px;
+        }
+        
+        /* Анимации */
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(60px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes goldPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); } 50% { box-shadow: 0 0 0 15px rgba(212, 175, 55, 0); } }
+        
+        .reveal { opacity: 0; transform: translateY(60px); transition: opacity 1s var(--transition), transform 1s var(--transition); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        
+        /* Общие стили */
+        .section { padding: 120px 0; border-bottom: 1px solid var(--border); }
+        .section-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(32px, 6vw, 56px); font-weight: 700; line-height: 1.1; margin-bottom: 40px; letter-spacing: -0.03em; }
+        .section-subtitle { font-size: 12px; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 16px; }
+        
+        /* Hero Section */
+        .hero { padding: 160px 0 100px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+        .hero-content h1 { font-family: 'Space Grotesk', sans-serif; font-size: clamp(48px, 8vw, 80px); font-weight: 700; line-height: 0.95; letter-spacing: -0.04em; margin-bottom: 24px; background: linear-gradient(180deg, #fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-content p { font-size: 18px; color: var(--text-secondary); margin-bottom: 40px; max-width: 400px; }
+        .hero-btn { display: inline-block; padding: 20px 40px; background: var(--gold); color: #000; font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; text-transform: uppercase; text-decoration: none; border-radius: 4px; transition: 0.3s; animation: goldPulse 2.5s infinite; }
+        .hero-btn:hover { background: var(--gold-hover); transform: translateY(-2px); animation: none; }
+        .hero-image { position: relative; }
+        .hero-image img { width: 100%; border-radius: 8px; border: 1px solid var(--border); object-fit: cover; aspect-ratio: 3/4; }
+        
+        /* About Section */
+        .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+        .about-image img { width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+        .about-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; }
+        .stat-item { padding: 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+        .stat-value { font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: var(--gold); margin-bottom: 8px; }
+        .stat-label { font-size: 14px; color: var(--text-secondary); }
+        
+        /* Calculator (встроенный) */
+        .calc-box { background: var(--bg-card); padding: 40px; border-radius: 8px; border: 1px solid var(--border); }
+        .slider-group { margin-bottom: 30px; }
+        .slider-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .slider-value { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--gold); }
+        input[type="range"] { width: 100%; height: 2px; -webkit-appearance: none; background: var(--border); outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); cursor: pointer; }
+        .calc-results { display: none; margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border); }
+        .calc-results.show { display: block; }
+        
+        /* Video */
+        .video-wrapper { position: relative; padding-bottom: 56.25%; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; }
+        .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+        .video-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); transition: 0.3s; }
+        .video-overlay:hover { background: rgba(0,0,0,0.2); }
+        .play-btn { width: 80px; height: 80px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #000; padding-left: 5px; }
+        
+        /* Reviews */
+        .reviews-slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 20px; padding-bottom: 20px; scrollbar-width: none; }
+        .reviews-slider::-webkit-scrollbar { display: none; }
+        .review-slide { flex: 0 0 100%; scroll-snap-align: start; }
+        .review-slide img { width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+        .review-btn { display: inline-flex; align-items: center; gap: 10px; margin-top: 20px; padding: 16px 32px; border: 1px solid var(--border); border-radius: 50px; color: var(--text); text-decoration: none; transition: 0.3s; }
+        .review-btn:hover { border-color: var(--gold); color: var(--gold); }
+        
+        /* FAQ */
+        .faq-item { border-bottom: 1px solid var(--border); padding: 30px 0; }
+        .faq-q { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+        .faq-a { font-size: 16px; color: var(--text-secondary); }
+        
+        /* Tariffs */
+        .tariffs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .tariff { padding: 40px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; transition: 0.3s; }
+        .tariff:hover { border-color: var(--gold); transform: translateY(-4px); }
+        .tariff.featured { border-color: var(--gold); background: linear-gradient(180deg, var(--bg-card) 0%, rgba(212, 175, 55, 0.05) 100%); }
+        .tariff-name { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 20px; }
+        .tariff-price { font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 700; color: var(--gold); margin-bottom: 8px; }
+        .tariff-price-rub { font-size: 16px; color: var(--text-muted); margin-bottom: 30px; }
+        .tariff-features { list-style: none; margin-bottom: 40px; flex-grow: 1; }
+        .tariff-features li { padding: 10px 0; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+        .tariff-btn { width: 100%; padding: 20px; background: transparent; color: var(--gold); border: 1px solid var(--gold); border-radius: 4px; font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: 0.3s; }
+        .tariff-btn:hover:not(:disabled) { background: var(--gold); color: #000; }
+        .tariff-btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--border); color: var(--text-muted); }
+        
+        /* Footer */
+        .footer { padding: 60px 0; text-align: center; border-top: 1px solid var(--border); }
+        .disclaimer { font-size: 12px; color: var(--text-muted); max-width: 800px; margin: 0 auto; line-height: 1.6; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); z-index: 2000; align-items: center; justify-content: center; padding: 24px; }
+        .modal.show { display: flex; }
+        .modal-content { background: var(--bg-card); border: 1px solid var(--border); padding: 40px; border-radius: 8px; width: 100%; max-width: 400px; text-align: center; }
+        .modal-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 30px; }
+        .modal-btn { padding: 18px; border-radius: 4px; font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; text-decoration: none; transition: 0.3s; }
+        .modal-btn.primary { background: var(--gold); color: #000; }
+        .modal-btn.secondary { border: 1px solid var(--border); color: var(--text); }
+        .modal-btn.close { border: none; background: transparent; color: var(--text-muted); cursor: pointer; margin-top: 10px; }
+
+        @media (max-width: 768px) {
+            .hero, .about-grid, .tariffs-grid { grid-template-columns: 1fr; gap: 40px; }
+            .nav-links { display: none; }
+            .hero { padding-top: 120px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Навигация -->
+    <nav class="navbar">
+        <a href="#" class="nav-logo">NMSTUPX</a>
+        <div class="nav-links">
+            <a href="#reviews">Отзывы</a>
+            <a href="#faq">Вопросы</a>
+            <a href="#tariffs">Тарифы</a>
+            <a href="https://t.me/nmstupx" target="_blank">Telegram</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Hero -->
+        <section class="hero reveal">
+            <div class="hero-content">
+                <h1>Результат вместо бесконечного старта</h1>
+                <p>Всё, что помогло мне сбросить 16 кг, закрыть долги и вернуть контроль над своей жизнью. Помогаю это сделать другим.</p>
+                <a href="#tariffs" class="hero-btn">Перейти к тарифам</a>
+            </div>
+            <div class="hero-image">
+                <!-- Замените на ваше лучшее фото -->
+                <img src="https://i.ibb.co/TMyJ1rHX/photo.jpg" alt="NMSTUPX">
+            </div>
+        </section>
+
+        <!-- Обо мне -->
+        <section class="section reveal">
+            <div class="section-subtitle">Кто я</div>
+            <div class="about-grid">
+                <div class="about-image">
+                    <img src="https://i.ibb.co/HphYKqCm/photo.jpg" alt="Обо мне">
+                </div>
+                <div class="about-content">
+                    <h2 class="section-title">Привет. Я — NMSTUPX</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">Я сидел в телефоне по 6–8 часов в день. Каждый вечер говорил себе: «Сделаю всё завтра». Но завтра не наступало. Я весил 112,6 кг, откладывал важные дела и накопил больше 1000 долларов долгов.</p>
+                    <p style="color: var(--text-secondary);">Однажды я понял: если не я, то кто? Я начал возвращать контроль. Сейчас я вешу 96,6 кг, у меня больше энергии, я закрыл долги и перестал откладывать дела на завтра.</p>
+                    
+                    <div class="about-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">-16 кг</div>
+                            <div class="stat-label">Сброшено веса</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">$1000+</div>
+                            <div class="stat-label">Закрыто долгов</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Калькулятор -->
+        <section class="section reveal">
+            <div class="section-subtitle">Инструмент</div>
+            <h2 class="section-title">Сколько ты теряешь?</h2>
+            <div class="calc-box">
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span style="color:var(--text-secondary);">Часы за быстрым контентом</span>
+                        <span class="slider-value"><span id="socialValue">4</span> ч</span>
+                    </div>
+                    <input type="range" id="socialHours" min="1" max="12" value="4" step="1">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span style="color:var(--text-secondary);">Часы в играх</span>
+                        <span class="slider-value"><span id="gameValue">2</span> ч</span>
+                    </div>
+                    <input type="range" id="gameHours" min="0" max="12" value="2" step="1">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span style="color:var(--text-secondary);">Заработок в час</span>
+                        <span class="slider-value">$<span id="salaryValue">3</span></span>
+                    </div>
+                    <input type="range" id="salary" min="1" max="15" value="3" step="1">
+                </div>
+                <button class="tariff-btn" onclick="calculate()" style="animation: goldPulse 2.5s infinite;">Рассчитать потери</button>
+                
+                <div class="calc-results" id="results">
+                    <!-- Результаты появятся здесь -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Шаг 1: Видео -->
+        <section class="section reveal">
+            <div class="section-subtitle">Шаг 1</div>
+            <h2 class="section-title">Посмотри это видео</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 30px;">Узнай, что стоит за моим результатом.</p>
+            <div class="video-wrapper" onclick="this.innerHTML='<iframe src=\'https://www.youtube.com/embed/CNM2UTt-6mU?autoplay=1\' allow=\'autoplay; encrypted-media\' allowfullscreen></iframe>'">
+                <!-- Обложка видео (можете заменить на свою) -->
+                <img src="https://img.youtube.com/vi/CNM2UTt-6mU/maxresdefault.jpg" style="width:100%; height:100%; object-fit:cover;" alt="Видео">
+                <div class="video-overlay">
+                    <div class="play-btn">▶</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Шаг 2: Отзывы -->
+        <section class="section reveal" id="reviews">
+            <div class="section-subtitle">Шаг 2</div>
+            <h2 class="section-title">Посмотри, что говорят другие</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 30px;">Реальные истории людей, которые вернули контроль.</p>
+            
+            <div class="reviews-slider">
+                <div class="review-slide"><img src="https://i.ibb.co/BH7V1NXM/photo.jpg" alt="Отзыв 1"></div>
+                <div class="review-slide"><img src="https://i.ibb.co/yFY3j2Wd/photo.jpg" alt="Отзыв 2"></div>
+                <div class="review-slide"><img src="https://i.ibb.co/xV5NQXs/photo.jpg" alt="Отзыв 3"></div>
+                <div class="review-slide"><img src="https://i.ibb.co/NRKmqFQ/photo.jpg" alt="Отзыв 4"></div>
+            </div>
+            
+            <!-- Ссылку на канал с отзывами вставьте сюда -->
+            <a href="https://t.me/nmstupx" target="_blank" class="review-btn">
+                <span>200+ отзывов в Telegram</span> →
+            </a>
+        </section>
+
+        <!-- Шаг 3: FAQ -->
+        <section class="section reveal" id="faq">
+            <div class="section-subtitle">Шаг 3</div>
+            <h2 class="section-title">Посмотри ответы на вопросы</h2>
+            
+            <div class="faq-item">
+                <div class="faq-q">Как быстро я увижу результат?</div>
+                <div class="faq-a">Первые изменения в энергии и фокусе вы заметите уже через неделю. Глобальные результаты (вес, доход, проекты) требуют от 1 до 3 месяцев системной работы.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">Подойдёт ли мне консультация, если я начинаю с нуля?</div>
+                <div class="faq-a">Да. На консультации мы разберём именно вашу ситуацию, найдём корень проблемы и составим пошаговый план действий с нуля.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">Что входит в консультацию?</div>
+                <div class="faq-a">Час личного общения со мной, полный разбор вашей ситуации, план действий и ответы на все вопросы. Вы уйдёте с чётким пониманием, что делать дальше.</div>
+            </div>
+        </section>
+
+        <!-- Шаг 4: Тарифы -->
+        <section class="section reveal" id="tariffs">
+            <div class="section-subtitle">Шаг 4</div>
+            <h2 class="section-title">Прими решение</h2>
+            
+            <div class="tariffs-grid">
+                <!-- PDF -->
+                <div class="tariff">
+                    <div class="tariff-name">PDF-гайд «14 дней»</div>
+                    <div class="tariff-price">$10</div>
+                    <div class="tariff-price-rub">≈ 900 ₽</div>
+                    <ul class="tariff-features">
+                        <li>Пошаговая инструкция</li>
+                        <li>Вывод из зависимости</li>
+                        <li>Возврат контроля</li>
+                    </ul>
+                    <button class="tariff-btn" disabled>Скоро</button>
+                </div>
+
+                <!-- Консультация -->
+                <div class="tariff featured">
+                    <div class="tariff-name">Личная консультация</div>
+                    <div class="tariff-price"><span style="font-size:24px; color:var(--text-muted); text-decoration:line-through; margin-right:10px;">$150</span> $40</div>
+                    <div class="tariff-price-rub">≈ 3 600 ₽</div>
+                    <ul class="tariff-features">
+                        <li>Личный созвон (60 минут)</li>
+                        <li>Разбор твоей ситуации</li>
+                        <li>План действий</li>
+                        <li>Ответы на вопросы</li>
+                    </ul>
+                    <button class="tariff-btn" onclick="openModal()">Приобрести</button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <p class="disclaimer">
+                <strong>Важное уведомление относительно заявления доходов и результатов.</strong><br>
+                Информация, представленная на данном сайте, носит исключительно информационный характер. Указанные результаты являются личными достижениями автора и не гарантируют получение аналогичных результатов каждым пользователем. Любые действия, предпринятые на основе данной информации, являются вашим личным выбором и ответственностью. Автор не несёт ответственности за возможные убытки или упущенную выгоду.
+            </p>
+        </footer>
+    </div>
+
+    <!-- Модалка -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h3 style="font-family:'Space Grotesk'; font-size:24px; margin-bottom:12px;">Связаться со мной</h3>
+            <p style="color:var(--text-secondary);">Выбери удобный мессенджер</p>
+            <div class="modal-buttons">
+                <a href="https://t.me/Byvon" target="_blank" class="modal-btn primary">Telegram</a>
+                <a href="https://wa.me/375257665835" target="_blank" class="modal-btn secondary">WhatsApp</a>
+                <a href="https://instagram.com/nmstupx" target="_blank" class="modal-btn secondary">Instagram</a>
+                <button class="modal-btn close" onclick="closeModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Плавное появление при скролле
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) entry.target.classList.add('visible');
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Логика калькулятора
+        const USD_TO_RUB = 90;
+        let selectedDays = 30;
+        
+        document.getElementById('socialHours').addEventListener('input', function() { document.getElementById('socialValue').textContent = this.value; });
+        document.getElementById('gameHours').addEventListener('input', function() { document.getElementById('gameValue').textContent = this.value; });
+        document.getElementById('salary').addEventListener('input', function() { document.getElementById('salaryValue').textContent = this.value; });
+
+        function calculate() {
+            const social = parseInt(document.getElementById('socialHours').value);
+            const game = parseInt(document.getElementById('gameHours').value);
+            const salary = parseInt(document.getElementById('salary').value);
+            
+            const totalHours = (social + game) * selectedDays;
+            const lostUSD = totalHours * salary;
+            const lostRUB = lostUSD * USD_TO_RUB;
+            
+            const resDiv = document.getElementById('results');
+            resDiv.innerHTML = `
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:12px; color:var(--gold); text-transform:uppercase; letter-spacing:0.1em;">Потерянное время</div>
+                    <div style="font-family:'Space Grotesk'; font-size:48px; font-weight:700; line-height:1;">${totalHours} <span style="font-size:20px; color:var(--text-muted);">ч</span></div>
+                </div>
+                <div>
+                    <div style="font-size:12px; color:var(--gold); text-transform:uppercase; letter-spacing:0.1em;">Упущенный доход</div>
+                    <div style="font-family:'Space Grotesk'; font-size:48px; font-weight:700; color:var(--red); line-height:1;">$${lostUSD}</div>
+                    <div style="color:var(--text-secondary); font-size:16px;">≈ ${lostRUB} ₽</div>
+                </div>
+            `;
+            resDiv.classList.add('show');
+        }
+
+        // Модалка
+        function openModal() { document.getElementById('modal').classList.add('show'); }
+        function closeModal() { document.getElementById('modal').classList.remove('show'); }
+        document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+    </script>
+</body>
+</html>
